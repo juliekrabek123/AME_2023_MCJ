@@ -75,12 +75,13 @@ def variance(
     K = x.shape[1]
 
     # Calculate sigma
-    if transform in ('', 'fd', 're'):
-        sigma = np.array(SSR/(N*T - K))
+    if transform in ('', 'fd', 'be'):
+        sigma = np.array(SSR/(N - K)) # np.array(SSR/(N*T - K))
+        print('sigma', sigma)
     elif transform.lower() == 'fe':
         sigma = np.array(SSR/(N * (T - 1) - K))
-    elif transform.lower() == 'be':
-        sigma = None
+    elif transform.lower() == 're':
+        sigma = np.array(SSR/(T * N - K))
     else:
         raise Exception('Invalid transform provided.')
     
@@ -159,4 +160,34 @@ def perm( Q_T: np.ndarray, A: np.ndarray, t=0) -> np.ndarray:
     # Loop over the individuals, and permutate their values.
     for i in range(int(A.shape[0]/t)):
         Z = np.vstack((Z, Q_T@A[i*t: (i + 1)*t]))
+    return Z
+
+
+def perm_ex3( Q_T: np.ndarray, A: np.ndarray) -> np.ndarray:
+    """Takes a transformation matrix and performs the transformation on 
+    the given vector or matrix.
+
+    Args:
+        Q_T (np.ndarray): The transformation matrix. Needs to have the same
+        dimensions as number of years a person is in the sample.
+        
+        A (np.ndarray): The vector or matrix that is to be transformed. Has
+        to be a 2d array.
+
+    Returns:
+        np.array: Returns the transformed vector or matrix.
+    """
+    # We can infer t from the shape of the transformation matrix.
+    M,T = Q_T.shape 
+    N = int(A.shape[0]/T)
+    K = A.shape[1]
+
+    # initialize output 
+    Z = np.empty((M*N, K))
+    
+    for i in range(N): 
+        ii_A = slice(i*T, (i+1)*T)
+        ii_Z = slice(i*M, (i+1)*M)
+        Z[ii_Z, :] = Q_T @ A[ii_A, :]
+
     return Z

@@ -3,10 +3,16 @@ from numpy import linalg as la
 import scipy.stats 
 from tabulate import tabulate
 
-
 def estimate( 
-        y: np.ndarray, x: np.ndarray, transform='', T:int=None, robust = False, sigma2_c:int = 0, sigma2_u:int = 0
+        y: np.ndarray, 
+        x: np.ndarray, 
+        transform='', 
+        T:int=None, 
+        robust = False, 
+        sigma2_c:int = 0, 
+        sigma2_u:int = 0
     ) -> list:
+
     """Uses the provided estimator (mostly OLS for now, and therefore we do 
     not need to provide the estimator) to perform a regression of y on x, 
     and provides all other necessary statistics such as standard errors, 
@@ -29,23 +35,31 @@ def estimate(
         list: Returns a dictionary with the following variables:
         'b_hat', 'se', 'sigma2', 't_values', 'R2', 'cov'
     """
-    
-    b_hat = est_ols(y, x)  # Estimated coefficients
-    residual = y - x@b_hat  # Calculated residuals
-    SSR = residual.T@residual  # Sum of squared residuals
+
+    # a. estimated coefficients
+    b_hat = est_ols(y, x)  
+    # b. calculated residuals
+    residual = y - x@b_hat  
+    # c. sum of squared residuals
+    SSR = residual.T@residual  
+    # d. total sum of squares
     SST = (y - np.mean(y)).T@(y - np.mean(y))  # Total sum of squares
+    # e. R squared
     R2 = 1 - SSR/SST
 
+    # f. variance, covariance and standard errors from variance function
     sigma2, cov, se = variance(transform, SSR, x, T, robust, residual, sigma2_c, sigma2_u)
+    # g. t-values
     t_values = b_hat/se
 
+    # h. p-values as array
     p_values = []
     for t_val in t_values:
         p_value = 2 * (scipy.stats.t.sf(np.abs(t_val), df=(x.shape[0] - x.shape[1])))
         p_values.append(p_value)
     p_values = np.array(p_values)
 
-    # Map p-values to asterisk symbols
+    # i. jap p-values to asterisk symbols
     def map_p_value_to_asterisks(p_value):
         if p_value <= 0.001:
             return '***'
@@ -58,16 +72,20 @@ def estimate(
         else:
             return ''
     
+    # j. find asterisk for p-values as array 
     asterisk_symbols = []
     for p_value in p_values:
         asterisk = map_p_value_to_asterisks(p_value[0])  # Assuming p_value is a 1D array
         asterisk_symbols.append([asterisk])
     asterisk_symbols = np.array(asterisk_symbols)
 
+    # k. p-values as float 
     p_values_float = [float(p) for p in p_values]
 
+    # l. p-values with ast in parenthese
     p_values_ast = [f'{p:.4f} ({asterisk[0]})' if asterisk[0] != '' else f'{p:.4f}' for p, asterisk in zip(p_values_float, asterisk_symbols)]
 
+    # m. names and results for all 
     names = ['b_hat', 'se', 'sigma2', 't_values', 'p_values_ast', 'R2', 'cov', 'ast']
     results = [b_hat, se, sigma2, t_values, p_values_ast, R2, cov, asterisk_symbols]
 
@@ -75,6 +93,7 @@ def estimate(
 
     
 def est_ols( y: np.ndarray, x: np.ndarray) -> np.ndarray:
+    
     """Estimates y on x by ordinary least squares, returns coefficents
 
     Args:
@@ -84,6 +103,7 @@ def est_ols( y: np.ndarray, x: np.ndarray) -> np.ndarray:
     Returns:
         np.array: Estimated beta coefficients.
     """
+
     return la.inv(x.T@x)@(x.T@y)
 
 def variance( 
@@ -96,6 +116,7 @@ def variance(
         sigma2_c: float,
         sigma2_u: float
     ) -> tuple:
+    
     """Calculates the covariance and standard errors from the OLS
     estimation.
 
@@ -120,14 +141,14 @@ def variance(
         covariance matrix and standard errors.
     """
 
-    # Store n and k, used for DF adjustments.
+    # a. store n and k, used for DF adjustments.
     K = x.shape[1]
     if transform in ('', 'fd', 'be'):
         N = x.shape[0]
     else:
         N = x.shape[0]/T
 
-    # Calculate sigma2
+    # b. calculate sigma2
     if transform in ('', 'fd', 'be'):
         sigma2 = (np.array(SSR/(N - K)))
     elif transform.lower() == 'fe':
@@ -137,31 +158,52 @@ def variance(
     else:
         raise Exception('Invalid transform provided.')
     
+    # c. calculate covariance matrix
     cov = sigma2*la.inv(x.T@x)
 
+    # d. calculate robust covariance matrix
     if robust is True:
+
+        # i. for not random effects
         if not transform.lower() == 're':
+            # o. initialize cov_v_out
             cov_v_out = 0
+            # oo. loop over individuals
             for i in range(int(N)):
+                # a. index values for individual i
                 idx_i = slice(i*T, (i+1)*T) # index values for individual i 
+                # b. find the corresponding x 
                 xi = x[idx_i]
+                # c. calculate the outer product of residuals for each individual 
                 res_outer = residual[idx_i] @ residual[idx_i].T
+                # d. add to the sum 
                 cov_v_out += xi.T @ res_outer @ xi
+            # ooo. calculate the covariance matrix
             cov_v = la.inv(x.T@x) @ (cov_v_out) @ la.inv(x.T@x)
 
+        # ii. for random effects
         if transform.lower() == 're':
+            # o. split residuals into N groups
             res_s = np.split(residual, N)
+            # oo. split x into N groups
             x_s = np.split(x, N)
+            # ooo. calculate omega inverse
             omega_inv = la.inv(sigma2_u*np.eye(T) + sigma2_c*np.ones((T, T)))
+            # oooo. initialize A and B
             A_out = 0
             B_out = 0
+            # ooooo. loop over individuals
             for i in range(int(N)):
+                # a. calculate A and B
                 A_out += x_s[i].T @ omega_inv @ x_s[i]
-                B_out += x_s[i].T @ omega_inv @ res_s[i] @ res_s[i].T @ omega_inv @ x_s[i])
+                B_out += x_s[i].T @ omega_inv @ res_s[i] @ res_s[i].T @ omega_inv @ x_s[i]
+            # oooooo. calculate covariance matrix
             cov_v = la.inv(A_out) @ B_out @ la.inv(A_out)      
 
+        # iii. return copy og covariance 
         cov = cov_v.copy()
 
+    # e. calculate standard errors
     se = np.sqrt(cov.diagonal()).reshape(-1, 1)
 
     return sigma2, cov, se
@@ -172,9 +214,10 @@ def print_table(
         results: dict,
         headers=["", "Beta", "Se", "t-values", "p-values"],
         title="Results",
-        _lambda:float=None,
+        _lambda:float = None,
         **kwargs
     ) -> None:
+    
     """Prints a nice looking table, must at least have coefficients, 
     standard errors and t-values. The number of coefficients must be the
     same length as the labels.
@@ -192,11 +235,10 @@ def print_table(
         Defaults to None.
     """
     
-    # Unpack the labels
+    # a. unpack the labels
     label_y, label_x = labels
     
-    # Create table, using the label for x to get a variable's coefficient,
-    # standard error and t_value.
+    # b. create table, using the label for x to get a variable's coefficient, standard error and t_value.
     table = []
     for i, name in enumerate(label_x):
         row = [
@@ -208,12 +250,12 @@ def print_table(
         ]
         table.append(row)
     
-    # Print the table
+    # c. print the table
     print(title)
     print(f"Dependent variable: {label_y}\n")
     print(tabulate(table, headers, **kwargs))
     
-    # Print extra statistics of the model.
+    # d. print extra statistics of the model.
     print(f"R\u00b2 = {results.get('R2').item():.3f}")
     print(f"\u03C3\u00b2 = {results.get('sigma2').item():.3f}")
     if _lambda: 
@@ -221,6 +263,7 @@ def print_table(
 
 
 def perm( Q_T: np.ndarray, A: np.ndarray) -> np.ndarray:
+   
     """Takes a transformation matrix and performs the transformation on 
     the given vector or matrix.
 
@@ -234,12 +277,13 @@ def perm( Q_T: np.ndarray, A: np.ndarray) -> np.ndarray:
     Returns:
         np.array: Returns the transformed vector or matrix.
     """
-    # We can infer t from the shape of the transformation matrix.
+
+    # a. we can infer t from the shape of the transformation matrix.
     M,T = Q_T.shape 
     N = int(A.shape[0]/T)
     K = A.shape[1]
 
-    # initialize output 
+    # b. initialize output 
     Z = np.empty((M*N, K))
     
     for i in range(N): 

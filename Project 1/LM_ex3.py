@@ -66,7 +66,7 @@ def estimate(
 
     p_values_float = [float(p) for p in p_values]
 
-    p_values_ast = [f'{p:.4f} ({asterisk})' for p, asterisk in zip(p_values_float, asterisk_symbols)]
+    p_values_ast = [f'{p:.4f} ({asterisk[0]})' if asterisk[0] != '' else f'{p:.4f}' for p, asterisk in zip(p_values_float, asterisk_symbols)]
 
     names = ['b_hat', 'se', 'sigma2', 't_values', 'p_values_ast', 'R2', 'cov', 'ast']
     results = [b_hat, se, sigma2, t_values, p_values_ast, R2, cov, asterisk_symbols]
@@ -145,19 +145,19 @@ def variance(
             for i in range(int(N)):
                 idx_i = slice(i*T, (i+1)*T) # index values for individual i 
                 xi = x[idx_i]
-                res_outer = residual[idx_i]@residual[idx_i].T
-                cov_v_out += xi.T@res_outer@xi
+                res_outer = residual[idx_i] @ residual[idx_i].T
+                cov_v_out += xi.T @ res_outer @ xi
             cov_v = la.inv(x.T@x) @ (cov_v_out) @ la.inv(x.T@x)
 
         if transform.lower() == 're':
-            res_split = np.split(residual,N)
-            omega = sigma2_u*np.eye(T) + sigma2_c*np.ones((T, T))
-            x_split = np.split(x,N)
+            res_s = np.split(residual, N)
+            x_s = np.split(x, N)
+            omega_inv = la.inv(sigma2_u*np.eye(T) + sigma2_c*np.ones((T, T)))
             A_out = 0
             B_out = 0
             for i in range(int(N)):
-                A_out += x_split[i].T@la.inv(omega)@x_split[i]
-                B_out += x_split[i].T@la.inv(omega)@res_split[i]@res_split[i].T@la.inv(omega)@x_split[i]
+                A_out += x_s[i].T @ omega_inv @ x_s[i]
+                B_out += x_s[i].T @ omega_inv @ res_s[i] @ res_s[i].T @ omega_inv @ x_s[i])
             cov_v = la.inv(A_out) @ B_out @ la.inv(A_out)      
 
         cov = cov_v.copy()

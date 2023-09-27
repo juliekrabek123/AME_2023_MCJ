@@ -16,7 +16,7 @@ def estimate(
     """Uses the provided estimator (mostly OLS for now, and therefore we do 
     not need to provide the estimator) to perform a regression of y on x, 
     and provides all other necessary statistics such as standard errors, 
-    t-values etc.  
+    t-values, covarince, p-values etc.  
 
     Args:
         >> y (np.ndarray): Dependent variable (Needs to have shape 2D shape)
@@ -33,7 +33,7 @@ def estimate(
 
     Returns:
         list: Returns a dictionary with the following variables:
-        'b_hat', 'se', 'sigma2', 't_values', 'R2', 'cov'
+        'b_hat', 'se', 'sigma2', 't_values', 'p_values_ast', 'R2', 'cov', 'ast'
     """
 
     # a. estimated coefficients
@@ -138,7 +138,7 @@ def variance(
 
     Returns:
         tuple: Returns the error variance (mean square error), 
-        covariance matrix and standard errors.
+        covariance matrix, standard errors and robust standard errors.
     """
 
     # a. store n and k, used for DF adjustments.
@@ -212,7 +212,7 @@ def variance(
 def print_table(
         labels: tuple,
         results: dict,
-        headers=["", "Beta", "Se", "t-values", "p-values"],
+        headers=["", "Beta", "Se", "t-values", "p-value"],
         title="Results",
         _lambda:float = None,
         **kwargs
@@ -229,7 +229,7 @@ def print_table(
         dictionary with at least the following keys:
             'b_hat', 'se', 't_values', 'R2', 'sigma2'
         >> headers (list, optional): Column headers. Defaults to 
-        ["", "Beta", "Se", "t-values"].
+        ["", "Beta", "Se", "t-values", "p-value"].
         >> title (str, optional): Table title. Defaults to "Results".
         _lambda (float, optional): Only used with Random effects. 
         Defaults to None.

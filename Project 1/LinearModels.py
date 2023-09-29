@@ -59,7 +59,7 @@ def estimate(
         p_values.append(p_value)
     p_values = np.array(p_values)
 
-    # i. jap p-values to asterisk symbols
+    # i. map p-values to asterisk symbols
     def map_p_value_to_asterisks(p_value):
         if p_value <= 0.001:
             return '***'

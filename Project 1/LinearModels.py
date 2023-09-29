@@ -166,18 +166,18 @@ def variance(
 
         # i. for not random effects
         if not transform.lower() == 're':
-            # o. initialize cov_v_out
+            # o. split residuals into N groups
+            res_s1 = np.split(residual, N)
+             # oo. split x into N groups
+            x_s1 = np.split(x, N)
+            # ooo. initialize cov_v_out
             cov_v_out = 0
-            # oo. loop over individuals
+            # oooo. loop over individuals
             for i in range(int(N)):
-                # a. index values for individual i
-                idx_i = slice(i*T, (i+1)*T) # index values for individual i 
-                # b. find the corresponding x 
-                xi = x[idx_i]
-                # c. calculate the outer product of residuals for each individual 
-                res_outer = residual[idx_i] @ residual[idx_i].T
-                # d. add to the sum 
-                cov_v_out += xi.T @ res_outer @ xi
+                # a. calculate the outer product of residuals for each individual 
+                res_outer = res_s1[i] @ res_s1[i].T
+                # b. add to the sum 
+                cov_v_out += x_s1[i].T @ res_outer @ x_s1[i]
             # ooo. calculate the covariance matrix
             cov_v = la.inv(x.T@x) @ (cov_v_out) @ la.inv(x.T@x)
 

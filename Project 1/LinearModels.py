@@ -162,43 +162,42 @@ def variance(
     cov = sigma2*la.inv(x.T@x)
 
     # d. calculate robust covariance matrix
+
+
     if robust is True:
 
         # i. for not random effects
         if not transform.lower() == 're':
-            # o. split residuals into N groups
-            res_s1 = np.split(residual, N)
-             # oo. split x into N groups
-            x_s1 = np.split(x, N)
-            # ooo. initialize cov_v_out
-            cov_v_out = 0
-            # oooo. loop over individuals
+            # o. initialize cov_v_out
+            cov_v_out = np.zeros((K, K))
+            # oo. loop over individuals
             for i in range(int(N)):
-                # a. calculate the outer product of residuals for each individual 
-                res_outer = res_s1[i] @ res_s1[i].T
-                # b. add to the sum 
-                cov_v_out += x_s1[i].T @ res_outer @ x_s1[i]
+                # a. find each individual
+                idx_i = slice(i*T, (i+1)*T)  
+                # b. calculate the outer product of residuals for each individual 
+                res_outer = residual[idx_i] @ residual[idx_i].T
+                # c. add to the sum 
+                cov_v_out += x[idx_i].T @ res_outer @ x[idx_i]
             # ooo. calculate the covariance matrix
             cov_v = la.inv(x.T@x) @ (cov_v_out) @ la.inv(x.T@x)
 
         # ii. for random effects
         if transform.lower() == 're':
-            # o. split residuals into N groups
-            res_s = np.split(residual, N)
-            # oo. split x into N groups
-            x_s = np.split(x, N)
-            # ooo. calculate omega inverse
+            # o. calculate omega inverse
             omega_inv = la.inv(sigma2_u*np.eye(T) + sigma2_c*np.ones((T, T)))
-            # oooo. initialize A and B
-            A_out = 0
-            B_out = 0
-            # ooooo. loop over individuals
+            # oo. initialize A and B
+            A_out = np.zeros((K, K))
+            B_out = np.zeros((K, K))
+            # ooo. loop over individuals
             for i in range(int(N)):
-                # a. calculate A and B
-                A_out += x_s[i].T @ omega_inv @ x_s[i]
-                B_out += x_s[i].T @ omega_inv @ res_s[i] @ res_s[i].T @ omega_inv @ x_s[i]
-            # oooooo. calculate covariance matrix
-            cov_v = la.inv(A_out) @ B_out @ la.inv(A_out)      
+                # a. find each individual
+                idx_i = slice(i*T, (i+1)*T)  
+                # b. calculate A and B
+                A_out += x[idx_i].T @ omega_inv @ x[idx_i]
+                res_outer = residual[idx_i] @ residual[idx_i].T
+                B_out += x[idx_i].T @ omega_inv @ res_outer @ omega_inv @ x[idx_i]
+            # oooo. calculate covariance matrix
+            cov_v = la.inv(A_out) @ B_out @ la.inv(A_out)   
 
         # iii. return copy og covariance 
         cov = cov_v.copy()

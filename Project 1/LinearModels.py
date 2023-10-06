@@ -162,8 +162,6 @@ def variance(
     cov = sigma2*la.inv(x.T@x)
 
     # d. calculate robust covariance matrix
-
-
     if robust is True:
 
         # i. for not random effects

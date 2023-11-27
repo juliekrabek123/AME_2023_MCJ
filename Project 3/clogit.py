@@ -49,14 +49,17 @@ def loglikelihood(theta, y, x):
     # deterministic utility 
     v = util(theta, x)
 
+    ccp = choice_prob(theta, x)
+
     # denominator 
-    denom = np.exp(v).sum(axis=1) # NOT keepdims! (N,)
+    #denom = np.exp(v).sum(axis=1) # NOT keepdims! (N,)
 
     # utility at chosen alternative 
-    v_i = v[np.arange(N), y]
+    #v_i = v[np.arange(N), y.astype(int)]
 
     # likelihood 
-    ll_i = v_i - np.log(denom) # difference between two 1-dimensional arrays 
+    #ll_i = v_i - np.log(denom) # difference between two 1-dimensional arrays 
+    ll_i = np.sum(y * np.log(ccp), axis = 1)
 
     return ll_i 
 

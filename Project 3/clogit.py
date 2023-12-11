@@ -58,6 +58,7 @@ def loglikelihood(theta, y, x):
     #v_i = v[np.arange(N), y.astype(int)]
 
     # likelihood 
+    assert (ccp > 0).all()
     #ll_i = v_i - np.log(denom) # difference between two 1-dimensional arrays 
     ll_i = np.sum(y * np.log(ccp), axis = 1)
 

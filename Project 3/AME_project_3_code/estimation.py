@@ -47,6 +47,7 @@ def estimate(
     
     cov, se = variance(q, y, x, result, cov_type)   
 
+    # p-values
     p_values = 2 * (scipy.stats.t.sf(np.abs(result.x/se), df=(x.shape[0] - x.shape[1]))).round(4)
 
     # collect output in a dict 

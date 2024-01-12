@@ -7,6 +7,7 @@ def q(theta, y, x):
     return -loglikelihood(theta, y, x)
 
 def starting_values(y, x): 
+    '''starting_values for thata'''
     N,J,K = x.shape
     theta = np.zeros((K,))
     return theta
@@ -49,16 +50,14 @@ def loglikelihood(theta, y, x):
     # deterministic utility 
     ccp = choice_prob(theta, x)
 
+    # Make sure that the ccps are non-negative 
     eps = 1e-10
     ccp = np.clip(ccp, eps, 1 - eps)
-
-
     if np.any(ccp<0.000000000001): 
         print(ccp[1,1])
 
     # likelihood 
     #assert (ccp > 0).all()
-    #ll_i = v_i - np.log(denom) # difference between two 1-dimensional arrays 
     ll_i = np.sum(y * np.log(ccp), axis = 1, keepdims=True)
 
     return ll_i 

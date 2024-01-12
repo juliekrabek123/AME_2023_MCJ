@@ -4,6 +4,8 @@ import pandas as pd
 from scipy import optimize
 from tabulate import tabulate
 import time
+from scipy.stats import norm
+import scipy.stats
 
 def estimate(
         q, # the function we are minimizing (the mean of) 
@@ -45,12 +47,15 @@ def estimate(
     
     cov, se = variance(q, y, x, result, cov_type)   
 
+    p_values = 2 * (scipy.stats.t.sf(np.abs(result.x/se), df=(x.shape[0] - x.shape[1]))).round(4)
+
     # collect output in a dict 
     res = {
         'theta': result.x,
         'se':       se,
         't': result.x / se,
         'cov':      cov,
+        'p':        p_values,
         'success':  result.success, # bool, whether convergence was succesful 
         'nit':      result.nit, # no. algorithm iterations 
         'nfev':     result.nfev, # no. function evaluations 
@@ -174,7 +179,8 @@ def print_table(
     tab = pd.DataFrame({
        'theta': results['theta'], 
         'se': results['se'], 
-        't': results['t']
+        't': results['t'],
+        'p-value': results['p']
         }, index=theta_label)
     
     if num_decimals is not None: 

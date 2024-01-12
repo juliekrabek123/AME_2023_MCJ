@@ -38,11 +38,13 @@ def PEA(x, thetahat, inter: bool):
     x_new[:, -1, :] = avg_car_home
     ccp_home = clogit.choice_prob(thetahat, x_new)
 
+    bias_1 = np.mean(ccp_home[:, -1]) - np.mean(ccp_for[:, -1])
+
     # ix. Calculate the bias as the mean of the difference between home and foreign market CCPs
     bias = np.mean(ccp_home[:, -1] - ccp_for[:, -1])
 
     # x. Return the calculated bias
-    return bias
+    return bias, bias_1
 
 # a. Marginal willingness to pay
 def MWP(thetahat):
@@ -103,11 +105,9 @@ def elasticities(thetahat, x, inter, x_vars):
     # vi. Return own and cross elasticities
     return E_own, E_cross
 
-
-
 def result(x, thetahat, cov, print_out: bool, se: bool, inter: bool,N,x_vars):
     # i. Calculate Partial Effects at the Average (PEA)
-    pea = PEA(x, thetahat, inter)
+    pea, ape = PEA(x, thetahat, inter)
     
     # ii. Calculate the Marginal Willingness to Pay (MWP)
     mwp = MWP(thetahat)
@@ -120,7 +120,7 @@ def result(x, thetahat, cov, print_out: bool, se: bool, inter: bool,N,x_vars):
     # iv. Calculate standard errors with delta method
     if se:
         # o. Home bias
-        qq0 = lambda theta: PEA(x, theta, inter)
+        qq0 = lambda theta: PEA(x, theta, inter)[0]
         g0 = est.centered_grad(qq0, thetahat)
         var0 = g0 @ cov @ g0.T
         se_home = np.sqrt(np.diag(var0))
@@ -144,7 +144,9 @@ def result(x, thetahat, cov, print_out: bool, se: bool, inter: bool,N,x_vars):
         se_21 = np.sqrt(np.diag(var21))
 
         # ooooo. Calculate t-values
-        t_values = (pea / se_home, mwp / se_mwp, own_price_elasticity / se_20, cross_price_elasticity / se_21)
+        t_values = (pea / se_home, 
+                    #mwp / se_mwp, 
+                    own_price_elasticity / se_20, cross_price_elasticity / se_21)
 
         # oooooo. Calculate p-values
         p_values = 2 * (scipy.stats.t.sf(np.abs(t_values), df=(x.shape[0] - x.shape[1]))).round(4)
@@ -160,12 +162,12 @@ def result(x, thetahat, cov, print_out: bool, se: bool, inter: bool,N,x_vars):
         #            cross_price_elasticity + 1.96 * var21/np.sqrt(N))
 
         CI_low = (pea - 1.96 * se_home, 
-                  mwp - 1.96 * se_mwp,
+                  #mwp - 1.96 * se_mwp,
                   own_price_elasticity - 1.96 * se_20,
                   cross_price_elasticity - 1.96 * se_21)
 
         CI_high = (pea + 1.96 * se_home, 
-                   mwp + 1.96 * se_mwp, 
+                   #mwp + 1.96 * se_mwp, 
                    own_price_elasticity + 1.96 * se_20,
                    cross_price_elasticity + 1.96 * se_21)
         
@@ -175,15 +177,21 @@ def result(x, thetahat, cov, print_out: bool, se: bool, inter: bool,N,x_vars):
         #                        np.column_stack(t_values),
         #                        np.column_stack(p_values)), axis=0)
 
-        data = np.concatenate((np.column_stack((pea, mwp, own_price_elasticity, cross_price_elasticity)),
-                               np.column_stack((se_home, se_mwp, se_20, se_21)),
+        data = np.concatenate((np.column_stack((pea, 
+                                                #mwp, 
+                                                own_price_elasticity, cross_price_elasticity)),
+                               np.column_stack((se_home, 
+                                                #se_mwp, 
+                                                se_20, se_21)),
                                np.column_stack(CI_low),
                                np.column_stack(CI_high),
                                np.column_stack(p_values)), axis=0)
 
     # v. Output the results
     if print_out:
-        df = pd.DataFrame(data=data.T, index=['PEA', 'MWP', 'OPE', 'CPE'],
+        df = pd.DataFrame(data=data.T, index=['PEA', 
+                                              #'MWP', 
+                                              'OPE', 'CPE'],
                           columns=['Estimate', 'se', 'CI low', 'CI high', 'p-value'])
         df = df.round(4)
         return df
